@@ -1,12 +1,11 @@
 replicaCount: 1
 
-image:
-  registry: registry-1.docker.io
-  repository: bitnamicharts/nginx
+containerPorts:
+  http: 8080
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8080
 
 resources:
   requests:
@@ -15,9 +14,6 @@ resources:
   limits:
     cpu: 100m
     memory: 128Mi
-
-containerPorts:
-  http: 80
 
 metrics:
   enabled: false
