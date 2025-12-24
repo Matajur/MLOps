@@ -8,7 +8,7 @@
 - This README.md file only applies to Argo application deployment.
 - A separate `values.yaml` file for the Argo application was chosen because it allows better scaling for large systems.
 - [Bitnami NGINX](https://charts.bitnami.com/bitnami) Helm chart from ArtifactHub was chosen for its stability.
-- Port-forwarding was used for the service access because of lower cost.
+- Port-forwarding instead of LoadBalancer was used for the service access because of lower cost.
 
 ### Deploy
 
@@ -48,15 +48,15 @@ kubectl -n infra-tools get secret argocd-initial-admin-secret `
   %{ [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) }
 ```
 
-1.2.2 Expose the ArgoCD server locally
+1.2.2 Expose the ArgoCD server locally (port-forwarding)
 
 ```bash
-kubectl -n infra-tools port-forward svc/argocd-server 8080:80
+kubectl -n infra-tools port-forward svc/argocd-server 9090:80
 ```
 
 1.2.3 Access the ArgoCD UI via link
 
-http://localhost:8080
+http://localhost:9090
 
 - Username: admin
 - Password: output of the command above
@@ -94,3 +94,19 @@ kubectl get svc -n infra-tools
 kubectl get applications -n infra-tools
 kubectl get pods -n application
 ```
+
+![Running Nginx pod](./img/pod.png)
+
+![Running app on ArgoCD UI](./img/nginx.png)
+
+5. Expose the Nginx server locally (port-forwarding)
+
+```bash
+kubectl -n application port-forward svc/nginx 8080:80
+```
+
+6. Access the Nginx welcome page via link
+
+http://localhost:8080
+
+![Nginx welcome page](./img/welcome.png)
