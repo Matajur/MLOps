@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  registry: public.ecr.aws
-  repository: bitnami/nginx
+  registry: registry-1.docker.io
+  repository: bitnamicharts/nginx
 
 service:
   type: ClusterIP
