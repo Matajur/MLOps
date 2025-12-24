@@ -42,6 +42,7 @@ cd main
 terraform init
 terraform plan
 terraform apply
+cd ..
 ```
 
 ![terraform plan execution](./img/plan.png)
@@ -92,8 +93,44 @@ kubectl get nodes
 
 ![kubectl get nodes execution](./img/nodes.png)
 
-6. Delete main infrastructure if not neaded.
+6. Deploy ArgoCD via Terraform
+
+Make sure that the values ​​of "region" and "cluster_name" in the argocd/variables.tf file are identical to the values ​​in the main/variables.tf file.
 
 ```bash
+cd main
+terraform init
+terraform plan
+terraform apply
+cd ..
+```
+
+7. Verify ArgoCD deployment
+
+```bash
+kubectl get pods -n <namespace name>
+```
+
+In my case
+
+```bash
+kubectl get pods -n infra-tools
+```
+
+![ArgoCD pods](./img/argocd.png)
+
+8. Delete ArgoCD if not neaded.
+
+```bash
+cd argocd
 terraform destroy
+cd ..
+```
+
+9. Delete main infrastructure if not neaded.
+
+```bash
+cd main
+terraform destroy
+cd ..
 ```
