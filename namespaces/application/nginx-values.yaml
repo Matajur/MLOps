@@ -1,11 +1,16 @@
 replicaCount: 1
 
+image:
+  tag: latest
+  pullPolicy: Always
+
 containerPorts:
   http: 8080
 
 service:
   type: ClusterIP
-  port: 8080
+  ports:
+    http: 80
 
 resources:
   requests:
