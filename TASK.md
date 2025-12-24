@@ -1,100 +1,141 @@
 # Tier 3. Module 3 - MLOps CI/CD
 
-## Homework for Topic 5 - Kubernetes for MLOps
+## Homework for Topic 7 - ArgoCD for Helm deployment
 
 ### Technical task
 
-In this task, we will work with two of the most important modules from the Terraform ecosystem:
+You already know how to create a cluster in AWS using Terraform, work with kubectl and Helm. It's time to take it a step further - **deploy services via Git** using **ArgoCD**.
 
-- `terraform-aws-modules/vpc/aws` for creating a network
+#### Objective
 
-and
-
-- `terraform-aws-modules/eks/aws` for deploying a Kubernetes cluster in AWS.
-
-#### Objectives
-
-- Use the modular structure of Terraform projects;
-- Automate the creation of VPC and EKS using ready-made modules;
-- Learn to create scalable `node groups` for CPU and GPU tasks;
-- Work with `terraform_remote_state`, `outputs`, and `providers`;
-- Access the cluster via `kubectl` immediately after `terraform apply`.
-
-#### Execution results
-
-- A full-fledged VPC infrastructure has been created in your AWS account using the official Terraform module.
-- An EKS cluster with two node groups (for example, for CPU and GPU tasks) has been automatically created in this VPC.
-- The project structure is modular: there are separate directories for `vpc/` and `eks/`, each with its own `variables.tf`, `outputs.tf`, `main.tf`.
-- The root directory of the project contains `main.tf`, which calls both modules (`module "vpc"`, `module "eks"`).
-- After `terraform apply`, the cluster is created and available via `kubectl`.
-- (Bonus) If you want, you can extend the cluster with separate tags / labels for nodes or create a private cluster with access via bastion-host.
+- Deploy ArgoCD in Kubernetes using Terraform;
+- Create a Git repository with Helm deployment (**MLflow**);
+- Create an ArgoCD Application that will automatically pick up this application;
+- Make sure that the cluster deploys pods automatically from Git.
 
 #### Task execution steps
 
-1. Create the `vpc/` module
+1. Deploy ArgoCD via Terraform
 
-- Use the official `terraform-aws-modules/vpc/aws` module.
-- The `vpc/` folder should contain:
-- `main.tf` — with the module call;
-- `variables.tf` — input parameters (CIDR, names, availability zones…);
-- `outputs.tf` — export of VPC identifiers, subnets, etc.;
-- `terraform.tf` and `backend.tf` — for backend configuration.
+- In the EKS cluster you have already created, deploy ArgoCD as a Helm release via Terraform.
+- Create a separate namespace (e.g. `infra-tools`).
+- Put all the values ​​for the AgroCD chart in the file `argocd-values.yaml`.
 
-2. Create the `eks/` module
+Check:
 
-- Use the `terraform-aws-modules/eks/aws` module.
-- There should be 2 `node groups`. Choose the Instance type from Free Tier: - `t2.micro` or `t3.micro`.
-- Connect to the VPC created in the previous step via `data.terraform_remote_state`.
-
-3. Root `main.tf`
-
-- Create a `main.tf` in the root directory that imports both modules:
-
-```shell
-module "vpc" {
-  source = "./vpc"
-  ...
-}
-
-module "eks" {
-  source = "./eks"
-  ...
-}
+```bash
+kubectl get pods -n infra-tools
 ```
 
-- All values ​​can be passed via `locals` or `variables.tf` in the root.
+There should be several pods with the prefix `argocd-`.
 
-4. After `terraform apply`
+Expected structure:
 
-- Verify that the cluster has been created:
-
-```shell
-aws eks --region <region> update-kubeconfig --name <your-cluster-name>
-kubectl get nodes
+```bash
+terraform/
+└── argocd/
+    ├── main.tf
+    ├── variables.tf
+    ├── provider.tf
+    ├── outputs.tf
+    ├── terraform.tf
+    ├── backend.tf
+    └── values/
+        └── argocd-values.yaml
 ```
 
-- You should see both node groups.
+**NOTE: for Argo CD deployment infrastracture see the updated branch 5.**
 
-#### Expected project structure
+2. Create a separate Git repository with Helm deployment
 
-```shell
-eks-vpc-cluster/
-├── main.tf
-├── variables.tf
-├── outputs.tf
-├── terraform.tf
-├── backend.tf
-├── vpc/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── terraform.tf
-│   └── backend.tf
-├── eks/
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── terraform.tf
-│   └── backend.tf
+Create a new repository
+
+- Name (example): `argocd-repo`
+- Visibility: Public recommended
+- Initialize README.md
+
+```bash
+goit-argo
+├── namespaces
+│ ├── application
+│ │ ├── nginx.yaml
+│ │ └── ns.yaml
+│ └── infra-tools
+│ └── ns.yaml
 └── README.md
 ```
+
+3. Create ArgoCD Application
+
+Where to find Helm chart:
+
+    - Search for the chart in ArtifactHub (name, version, repo URL) or on GitHub projects (charts/ section or Helm repo itself).
+    - From there you take:
+
+- `repoURL` (URL of Helm repository),
+- `chart` (chart name),
+- `targetRevision` (chart version),
+- example `values.yaml` (this is not an Argo manifest, just overrides for Helm).
+
+How to convert `values` ​​to Argo Application:
+
+- Your values ​​need to be embedded in Argo Application as Helm source. There are two ways:
+
+Option A — `inline values:`
+
+In `Application`, add a section `spec.source.helm.values: |` and insert your overrides there (from ArtifactHub).
+
+Option B — a separate `values.yaml` file:
+
+Put `values.yaml` in your Git repository and reference it via `spec.source.helm.valueFiles` (e.g. `values/mlflow-values.yaml`).
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: <app-name>
+  namespace: <argocd-namespace> # where ArgoCD is deployed (for ex., infra-tools)
+spec:
+  project: default
+  source:
+    repoURL: <helm-repo-url> # з ArtifactHub or GitHub Helm repo
+    chart: <chart-name> # chart name
+    targetRevision: <chart-version>
+    helm:
+      # CHOOSE ONE WAY:
+      # values: |         # ← paste your overrides here (Option A)
+      #  ...
+      # valueFiles:        # ← or link to a file in your Git (Option B)
+      #  - values/<file>.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: <target-namespace> # where to deploy the application
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+```
+
+4. Add the Application to the cluster
+
+- Create an `application.yaml` file in your Git repository with a description of the ArgoCD Application (see the previous step).
+- Commit the changes and do a `git push` to the `main` branch.
+- ArgoCD will automatically pick up the new Application from the repository.
+- Check in the ArgoCD web interface (or via command):
+
+```bash
+kubectl get applications -n <argocd-namespace>
+```
+
+Wait for synchronization and make sure that pods have appeared in the corresponding namespace:
+
+```bash
+kubectl get pods -n <target-namespace>
+```
+
+5. Open access to the service
+
+- Either via `kubectl port-forward` or via LoadBalancer.
+- Add instructions to README.md.
