@@ -2,17 +2,21 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: nginx
-  namespace: infra-tools   # Argo CD namespace
+  namespace: infra-tools # Argo CD namespace
 spec:
   project: default
 
   source:
-    repoURL: https://charts.bitnami.com/bitnami
-    chart: nginx
-    targetRevision: 15.14.0
-    helm:
-      valueFiles:
-        - namespaces/application/nginx-values.yaml
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: nginx
+      targetRevision: 15.14.0
+      helm:
+        valueFiles:
+          - $values/namespaces/application/nginx-values.yaml
+
+    - repoURL: https://github.com/Matajur/MLOps.git
+      targetRevision: lesson-7
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc
@@ -24,4 +28,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      
