@@ -1,0 +1,19 @@
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+containerPorts:
+  http: 80
+
+metrics:
+  enabled: false

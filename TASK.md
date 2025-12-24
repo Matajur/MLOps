@@ -61,7 +61,7 @@ goit-argo
 │ │ ├── nginx.yaml
 │ │ └── ns.yaml
 │ └── infra-tools
-│ └── ns.yaml
+│   └── ns.yaml
 └── README.md
 ```
 
