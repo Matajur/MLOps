@@ -1,4 +1,8 @@
-# Lesson 8-9: MLflow + Pushgateway via ArgoCD
+# Tier 3. Module 3 - MLOps CI/CD
+
+## Homework for Topic 9 - Monitoring the quality of models and tracking experiments
+
+### Deployment
 
 This branch contains GitOps manifests and an experiment script that:
 
@@ -9,7 +13,7 @@ This branch contains GitOps manifests and an experiment script that:
   - pushes `mlflow_accuracy` and `mlflow_loss` to Pushgateway with `run_id` labels;
   - downloads the best model to `best_model/`.
 
-## Repo structure
+#### Repo structure
 
 ```
 MLOps/
@@ -32,15 +36,44 @@ MLOps/
 └── README.md
 ```
 
-## 1) Deploy MLflow infra via ArgoCD
+#### Execution steps
 
-Apply the applications to the ArgoCD namespace (adjust `-n argocd` if your ArgoCD lives elsewhere):
+After uploading the project to the repository, follow these steps.
+
+1. Register Applications in ArgoCD
+
+The repository itself was registered in the ArgoCD UI during the previous homework, see the branch [lesson-7](https://github.com/Matajur/MLOps/tree/lesson-7).
+
+1.1 Apply ArgoCD Applications
+
+Whenever you run the commands listed below, enter the name of your namespace instead of "infra-tools".
 
 ```bash
-kubectl apply -n argocd -f argocd/applications/minio.yaml
-kubectl apply -n argocd -f argocd/applications/postgres.yaml
-kubectl apply -n argocd -f argocd/applications/mlflow.yaml
+kubectl apply -n infra-tools -f argocd/applications/
 ```
+
+This:
+
+- Creates Application CRs in Kubernetes;
+- Argo CD immediately detects them.
+
+1.2 Verify Applications exist
+
+```bash
+kubectl get applications -n infra-tools
+```
+
+![Registered applications](./img/applications.png)
+
+1.3 Log in to the ArgoCD UI to view applications' details
+
+```bash
+kubectl -n infra-tools port-forward svc/argocd-server 9090:80
+```
+
+How to get username and password for ArgoCD UI is explained in the previous homework, see the branch [lesson-7](https://github.com/Matajur/MLOps/tree/lesson-7).
+
+2. mm
 
 The MLflow server is exposed as a `ClusterIP` service in `mlflow` namespace (port `5000`).
 
