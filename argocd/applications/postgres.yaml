@@ -12,6 +12,11 @@ spec:
     helm:
       releaseName: postgres
       values: |
+        image:
+          registry: docker.io
+          repository: bitnami/postgresql
+          tag: 16.4.0-debian-12-r0
+
         auth:
           username: mlflow
           database: mlflow
