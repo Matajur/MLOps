@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/bitnami/charts.git
-    targetRevision: main
+    targetRevision: postgresql/17.0.1
     path: bitnami/postgresql
     helm:
       releaseName: postgres

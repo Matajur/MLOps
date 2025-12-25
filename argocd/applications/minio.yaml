@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/bitnami/charts.git
-    targetRevision: main
+    targetRevision: minio/17.0.23
     path: bitnami/minio
     helm:
       releaseName: minio
