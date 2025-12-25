@@ -1,112 +1,90 @@
-# Tier 3. Module 3 - MLOps CI/CD
+# Lesson 8-9: MLflow + Pushgateway via ArgoCD
 
-## Homework for Topic 7 - ArgoCD for Helm deployment
+This branch contains GitOps manifests and an experiment script that:
 
-### IMPORTANT NOTES:
+- Deploys MinIO, PostgreSQL, and an MLflow Tracking Server via ArgoCD;
+- Deploys Prometheus Pushgateway via ArgoCD;
+- Runs a small hyperparameter sweep on Iris and:
+  - logs params/metrics/artifacts to MLflow;
+  - pushes `mlflow_accuracy` and `mlflow_loss` to Pushgateway with `run_id` labels;
+  - downloads the best model to `best_model/`.
 
-- For instructions on deploying the full infrastructure with VPC, EKS, and ArgoCD pods, see the README.md file from [branch 5](https://github.com/Matajur/MLOps/tree/lesson-5-6).
-- This README.md file only applies to Argo application deployment.
-- A separate `values.yaml` file for the Argo application was chosen because it allows better scaling for large systems.
-- [Bitnami NGINX](https://charts.bitnami.com/bitnami) Helm chart from ArtifactHub was chosen for its stability.
-- Port-forwarding instead of LoadBalancer was used for the service access because of lower cost.
+## Repo structure
 
-### Deploy
-
-Once the code is committed to the Git repository, follow these steps.
-
-1. Register the repository in Argo CD
-
-1.1 Using ArgoCD CLI
-
-```bash
-argocd repo add https://github.com/<your-org>/<your-repo>.git
+```
+MLOps/
+├── argocd/
+│   ├── applications/
+│   │   ├── mlflow.yaml
+│   │   ├── minio.yaml
+│   │   ├── postgres.yaml
+│   │   └── pushgateway.yaml
+│   └── manifests/
+│       └── mlflow/
+│           ├── deployment.yaml
+│           ├── service.yaml
+│           └── secret.yaml
+├── experiments/
+│   ├── train_and_push.py
+│   └── requirements.txt
+├── best_model/
+│   └── <downloaded model artifacts appear here after running>
+└── README.md
 ```
 
-In y case
+## 1) Deploy MLflow infra via ArgoCD
+
+Apply the applications to the ArgoCD namespace (adjust `-n argocd` if your ArgoCD lives elsewhere):
 
 ```bash
-argocd repo add https://github.com/Matajur/MLOps.git
+kubectl apply -n argocd -f argocd/applications/minio.yaml
+kubectl apply -n argocd -f argocd/applications/postgres.yaml
+kubectl apply -n argocd -f argocd/applications/mlflow.yaml
 ```
 
-1.2 Using ArgoCD UI
+The MLflow server is exposed as a `ClusterIP` service in `mlflow` namespace (port `5000`).
 
-1.2.1 Get a one-time password to access the ArgoCD UI
-
-Whenever you run the commands listed below, enter the name of your namespace instead of "infra-tools".
-
-On Linux
+Verify via port-forward:
 
 ```bash
-kubectl -n infra-tools get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+kubectl -n mlflow port-forward svc/mlflow 5000:5000
+curl -I http://localhost:5000
 ```
 
-On Windows
+## 2) Deploy Prometheus Pushgateway via ArgoCD
 
 ```bash
-kubectl -n infra-tools get secret argocd-initial-admin-secret `
-  -o jsonpath="{.data.password}" |
-  %{ [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) }
+kubectl apply -n argocd -f argocd/applications/pushgateway.yaml
 ```
 
-1.2.2 Expose the ArgoCD server locally (port-forwarding)
+Pushgateway will be available in-cluster at:
+
+- `http://pushgateway.monitoring.svc.cluster.local:9091`
+
+## 3) Run training and push metrics
+
+From the repo root:
 
 ```bash
-kubectl -n infra-tools port-forward svc/argocd-server 9090:80
+python -m venv .venv
+source .venv/bin/activate
+pip install -r experiments/requirements.txt
+
+# In a separate terminal: keep port-forward active
+kubectl -n mlflow port-forward svc/mlflow 5000:5000
+
+python experiments/train_and_push.py \
+  --tracking-uri http://localhost:5000 \
+  --pushgateway http://pushgateway.monitoring.svc.cluster.local:9091
 ```
 
-1.2.3 Access the ArgoCD UI via link
+After completion, the best model artifacts will be downloaded into `best_model/`.
 
-http://localhost:9090
+## 4) View metrics in Grafana
 
-- Username: admin
-- Password: output of the command above
+In **Grafana → Explore → Prometheus**, query:
 
-  1.2.4 Register the repository link in the Argo CD UI → Settings → Repositories
+- `mlflow_accuracy`
+- `mlflow_loss`
 
-- For a public repository use the connection method: via HTTPS
-- Connection Type: Git
-- Repository URL: https://github.com/Matajur/MLOps.git (link to a complete ropository, not a separate branch)
-- Name: mlops
-- Project: default
-
-![ArgoCD connected to Git repository](./img/argocd.png)
-
-2. Apply the application
-
-```bash
-kubectl apply -f applications/nginx-application.yaml
-```
-
-![Application created](./img/app.png)
-
-3. Check ArgoCD sanity (all pods should be Running)
-
-```bash
-kubectl get pods -n infra-tools
-kubectl get svc -n infra-tools
-```
-
-![Running pods](./img/pods.png)
-
-4. Verify synchronization
-
-```bash
-kubectl get applications -n infra-tools
-kubectl get pods -n application
-```
-
-![Running Nginx pod](./img/pod.png)
-
-![Running app on ArgoCD UI](./img/nginx.png)
-
-5. Expose the Nginx server locally (port-forwarding)
-
-```bash
-kubectl -n application port-forward svc/nginx 8080:80
-```
-
-6. Access the Nginx welcome page via link
-
-http://localhost:8080
-
-![Nginx welcome page](./img/welcome.png)
+Use table or time series view. Each pushed sample is labelled with `run_id`.

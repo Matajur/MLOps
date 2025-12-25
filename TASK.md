@@ -1,141 +1,91 @@
 # Tier 3. Module 3 - MLOps CI/CD
 
-## Homework for Topic 7 - ArgoCD for Helm deployment
+## Homework for Topic 9 - Monitoring the quality of models and tracking experiments
 
 ### Technical task
 
-You already know how to create a cluster in AWS using Terraform, work with kubectl and Helm. It's time to take it a step further - **deploy services via Git** using **ArgoCD**.
+Now it's time to move on to the **quality of the model itself** — tracking experiments, parameters, results, and automatic analysis. We will learn:
 
-#### Objective
+- Carry out a series of launches with different parameters;
+- Determine the best model;
+- Display results not only in MLflow, but also in Grafana (via PushGateway + Prometheus).
 
-- Deploy ArgoCD in Kubernetes using Terraform;
-- Create a Git repository with Helm deployment (**MLflow**);
-- Create an ArgoCD Application that will automatically pick up this application;
-- Make sure that the cluster deploys pods automatically from Git.
+This project will be a great addition to your portfolio as an **MLOps engineer** who builds not just pipelines, but **controlled systems for model analysis**.
 
-#### Task execution steps
+#### The goal
 
-1. Deploy ArgoCD via Terraform
+- Track ML experiments through MLflow;
+- Log parameters, metrics, artifacts;
+- Automatically choose the best model;
+- Output key metrics of the experiment in Grafana via PushGateway;
+- Deploy all services declaratively through **ArgoCD**.
 
-- In the EKS cluster you have already created, deploy ArgoCD as a Helm release via Terraform.
-- Create a separate namespace (e.g. `infra-tools`).
-- Put all the values ​​for the AgroCD chart in the file `argocd-values.yaml`.
+#### Task performance steps
 
-Check:
+1. Deploy the MLflow infrastructure via ArgoCD
+
+In the repository with ArgoCD configurations, create:
+
+- `application.yaml` for MinIO from bucket `mlflow-artifacts`;
+- `application.yaml` for PostgreSQL with `mlflow` base;
+- `application.yaml` for MLflow Tracking Server (`ClusterIP`, port 5000).
+- Verify that MLflow is available via kubectl port-forward.
+
+2. Deploy Prometheus PushGateway via ArgoCD
+
+Create an `application.yaml` for:
+
+- Helm-chart `prometheus-pushgateway`;
+- Namespace — `monitoring`;
+- The service should be `ClusterIP`, port `9091`.
+
+After that, PushGateway will be available at:
+`http://pushgateway.monitoring.svc.cluster.local:9091`
+
+3. Write the Python script `train_and_push.py`
+
+The script should:
+
+- Download a dataset (for example, Iris);
+- Complete a training cycle with different parameters (`learning_rate`, `epochs`);
+- For each run:
+  - Log parameters and metrics in MLflow;
+  - Save the model as an artifact;
+  - Push `accuracy` and `loss` to PushGateway with `run_id` labels;
+- After completion:
+  - Find the launch with the best `accuracy`;
+  - Copy the model to the local directory `best_model/`.
+
+4. View the metrics in Grafana
+
+In Grafana → Explore → Prometheus check:
+
+- `mlflow_accuracy`
+- `mlflow_loss`
+- Build graphs or a tabular view.
+
+5. README.md should contain:
+
+- How to run `train_and_push.py`;
+- How to check the presence of MLflow and PushGateway in the cluster;
+- How to `port-forward`;
+- How to view metrics in Grafana;
+- Links to MLflow UI and Grafana Explore screenshots.
+
+#### Expected structure of the project:
 
 ```bash
-kubectl get pods -n infra-tools
-```
-
-There should be several pods with the prefix `argocd-`.
-
-Expected structure:
-
-```bash
-terraform/
-└── argocd/
-    ├── main.tf
-    ├── variables.tf
-    ├── provider.tf
-    ├── outputs.tf
-    ├── terraform.tf
-    ├── backend.tf
-    └── values/
-        └── argocd-values.yaml
-```
-
-**NOTE: for Argo CD deployment infrastracture see the updated branch 5.**
-
-2. Create a separate Git repository with Helm deployment
-
-Create a new repository
-
-- Name (example): `argocd-repo`
-- Visibility: Public recommended
-- Initialize README.md
-
-```bash
-goit-argo
-├── namespaces
-│ ├── application
-│ │ ├── nginx.yaml
-│ │ └── ns.yaml
-│ └── infra-tools
-│   └── ns.yaml
+mlops-experiments/
+├── argocd/
+│   ├── applications/
+│   │   ├── mlflow.yaml
+│   │   ├── minio.yaml
+│   │   ├── postgres.yaml
+│   │   └── pushgateway.yaml
+├── experiments/
+│   ├── train_and_push.py
+│   └── requirements.txt
+├── best_model/
+│   └── <model> # will appear after successful launch
 └── README.md
 ```
-
-3. Create ArgoCD Application
-
-Where to find Helm chart:
-
-    - Search for the chart in ArtifactHub (name, version, repo URL) or on GitHub projects (charts/ section or Helm repo itself).
-    - From there you take:
-
-- `repoURL` (URL of Helm repository),
-- `chart` (chart name),
-- `targetRevision` (chart version),
-- example `values.yaml` (this is not an Argo manifest, just overrides for Helm).
-
-How to convert `values` ​​to Argo Application:
-
-- Your values ​​need to be embedded in Argo Application as Helm source. There are two ways:
-
-Option A — `inline values:`
-
-In `Application`, add a section `spec.source.helm.values: |` and insert your overrides there (from ArtifactHub).
-
-Option B — a separate `values.yaml` file:
-
-Put `values.yaml` in your Git repository and reference it via `spec.source.helm.valueFiles` (e.g. `values/mlflow-values.yaml`).
-
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: <app-name>
-  namespace: <argocd-namespace> # where ArgoCD is deployed (for ex., infra-tools)
-spec:
-  project: default
-  source:
-    repoURL: <helm-repo-url> # з ArtifactHub or GitHub Helm repo
-    chart: <chart-name> # chart name
-    targetRevision: <chart-version>
-    helm:
-      # CHOOSE ONE WAY:
-      # values: |         # ← paste your overrides here (Option A)
-      #  ...
-      # valueFiles:        # ← or link to a file in your Git (Option B)
-      #  - values/<file>.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: <target-namespace> # where to deploy the application
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-```
-
-4. Add the Application to the cluster
-
-- Create an `application.yaml` file in your Git repository with a description of the ArgoCD Application (see the previous step).
-- Commit the changes and do a `git push` to the `main` branch.
-- ArgoCD will automatically pick up the new Application from the repository.
-- Check in the ArgoCD web interface (or via command):
-
-```bash
-kubectl get applications -n <argocd-namespace>
-```
-
-Wait for synchronization and make sure that pods have appeared in the corresponding namespace:
-
-```bash
-kubectl get pods -n <target-namespace>
-```
-
-5. Open access to the service
-
-- Either via `kubectl port-forward` or via LoadBalancer.
-- Add instructions to README.md.

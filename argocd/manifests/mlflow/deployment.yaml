@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  labels:
+    app: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: python:3.11-slim
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+
+          # Installs runtime deps then start mlflow server
+          command: ["sh", "-c"]
+          args:
+            - >
+              pip install --no-cache-dir mlflow boto3 psycopg2-binary &&
+              mlflow server
+              --host 0.0.0.0
+              --port 5000
+              --backend-store-uri "$MLFLOW_BACKEND_STORE_URI"
+              --default-artifact-root "$MLFLOW_ARTIFACT_ROOT"
+
+          env:
+            # ---- Postgres connection pieces ----
+            - name: PGUSER
+              value: "mlflow"
+            - name: PGDATABASE
+              value: "mlflow"
+            - name: PGHOST
+              value: "postgres-postgresql"
+            - name: PGPORT
+              value: "5432"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-postgresql
+                  key: password
+
+            # K8s will expand $(VAR) references in env values
+            - name: MLFLOW_BACKEND_STORE_URI
+              value: "postgresql://$(PGUSER):$(PGPASSWORD)@$(PGHOST):$(PGPORT)/$(PGDATABASE)"
+
+            # ---- MinIO / S3 settings ----
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "http://minio:9000"
+            - name: MLFLOW_ARTIFACT_ROOT
+              value: "s3://mlflow-artifacts"
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: root-user
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio
+                  key: root-password
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
