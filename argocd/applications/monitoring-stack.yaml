@@ -22,6 +22,12 @@ spec:
           service:
             type: ClusterIP
 
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+            patch:
+              enabled: false
+
         prometheus:
           service:
             type: ClusterIP

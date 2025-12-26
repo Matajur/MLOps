@@ -22,12 +22,12 @@ MLOps/
 │   │   ├── mlflow.yaml
 │   │   ├── minio.yaml
 │   │   ├── postgres.yaml
+|   |   ├── monitoring-stack.yaml
 │   │   └── pushgateway.yaml
 │   └── manifests/
 │       └── mlflow/
 │           ├── deployment.yaml
-│           ├── service.yaml
-│           └── secret.yaml
+│           └── service.yaml
 ├── experiments/
 │   ├── train_and_push.py
 │   └── requirements.txt
