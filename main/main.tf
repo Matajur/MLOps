@@ -22,9 +22,9 @@ locals {
   eks_managed_node_groups = {
     for i in range(local.node_group_count) :
     "ng-${i + 1}" => {
-      min_size       = 1
+      min_size       = 2
+      desired_size   = 2
       max_size       = 2
-      desired_size   = 1
       instance_types = ["t3.small"]
     }
   }
