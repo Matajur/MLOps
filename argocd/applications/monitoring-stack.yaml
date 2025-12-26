@@ -16,6 +16,7 @@ spec:
     targetRevision: 80.6.0
     helm:
       releaseName: monitoring
+      skipCrds: false
       values: |
         grafana:
           enabled: true
@@ -45,3 +46,5 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
+      - Replace=true
