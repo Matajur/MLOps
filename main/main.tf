@@ -16,16 +16,16 @@ module "vpc" {
 }
 
 locals {
-  node_group_count = 2
+  node_group_count = 1
 
   # Generate N identical managed node groups
   eks_managed_node_groups = {
     for i in range(local.node_group_count) :
     "ng-${i + 1}" => {
-      min_size       = 2
-      desired_size   = 2
-      max_size       = 2
-      instance_types = ["t3.small"]
+      min_size       = 3
+      desired_size   = 3
+      max_size       = 5
+      instance_types = ["t3.large"]
     }
   }
 }
