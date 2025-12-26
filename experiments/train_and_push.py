@@ -158,8 +158,8 @@ def main() -> int:
             mlflow.log_metric("loss", loss)
 
             # Log artifacts (scaler + model) using MLflow's sklearn flavor
-            mlflow.sklearn.log_model(sk_model=clf, artifact_path="model")
-            mlflow.sklearn.log_model(sk_model=scaler, artifact_path="scaler")
+            mlflow.sklearn.log_model(sk_model=clf, name="model")
+            mlflow.sklearn.log_model(sk_model=scaler, name="scaler")
 
             # Push to Pushgateway with run_id label
             push_metrics(args.pushgateway, run_id=run_id, accuracy=acc, loss=loss)
