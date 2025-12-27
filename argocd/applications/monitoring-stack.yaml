@@ -18,18 +18,47 @@ spec:
       releaseName: monitoring
       skipCrds: false
       values: |
-        grafana:
-          enabled: true
-          service:
-            type: ClusterIP
+        alertmanager:
+          enabled: false
+
+        kubeApiServer:
+          enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        kubeProxy:
+          enabled: false
+
+        kubeStateMetrics:
+          enabled: false
 
         prometheusOperator:
+          enabled: true
+
+          # FULLY disable admission webhooks
           admissionWebhooks:
             enabled: false
             patch:
               enabled: false
+            certManager:
+              enabled: false
+
+          # Ensure no webhook service/secret is expected
+          tls:
+            enabled: false
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+            limits:
+              memory: 400Mi
 
         prometheus:
+          enabled: true
           service:
             type: ClusterIP
           prometheusSpec:
@@ -37,8 +66,42 @@ spec:
             podMonitorSelectorNilUsesHelmValues: true
             ruleSelectorNilUsesHelmValues: true
 
-        alertmanager:
-          enabled: false
+            retention: 6h
+            retentionSize: 1GB
+
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 1Gi
+
+        grafana:
+          enabled: true
+          replicas: 1
+          service:
+            type: ClusterIP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          sidecar:
+            resources:
+              requests:
+                cpu: 50m
+                memory: 128Mi
+              limits:
+                memory: 256Mi
+
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
 
   syncPolicy:
     automated:
