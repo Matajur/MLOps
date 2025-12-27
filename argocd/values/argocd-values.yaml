@@ -4,44 +4,63 @@ global:
 
 configs:
   cm:
-    # Faster drift detection than default (~3m)
     timeout.reconciliation: 30s
-
-    # Local Argo CD user for initial access and automation
     accounts.devops: apiKey,login
 
   rbac:
-    # Every user is read-only unless explicitly granted permissions
     policy.default: role:readonly
-
-    # Admin access to the devops account
     policy.csv: |
       g, devops, role:admin
 
 server:
   replicas: 1
-
-  # TLS should be terminated at the Ingress / ALB level
   extraArgs:
     - --insecure
-
   service:
     type: ClusterIP
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 controller:
-  # Core reconciliation engine
   replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
 
 repoServer:
-  # Server for fetching Git repos and rendering Helm/Kustomize
   replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
 applicationSet:
   enabled: true
   replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
 redis:
-  # For HA and controller coordination
   enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
 
 crds:
-  #Required for upgrades
   install: true

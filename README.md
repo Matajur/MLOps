@@ -74,12 +74,12 @@ aws eks --region us-east-1 update-kubeconfig --name my-eks-cluster
 
 aws eks create-access-entry `
   --cluster-name my-eks-cluster `
-  --principal-arn arn:aws:iam::158583182440:user/terraform-user `
+  --principal-arn arn:aws:iam::014885976360:user/terraform-user `
   --region us-east-1
 
 aws eks associate-access-policy `
   --cluster-name my-eks-cluster `
-  --principal-arn arn:aws:iam::158583182440:user/terraform-user `
+  --principal-arn arn:aws:iam::014885976360:user/terraform-user `
   --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy `
   --access-scope type=cluster `
   --region us-east-1
@@ -98,7 +98,7 @@ kubectl get nodes
 Make sure that the values ​​of "region" and "cluster_name" in the argocd/variables.tf file are identical to the values ​​in the main/variables.tf file.
 
 ```bash
-cd main
+cd argocd
 terraform init
 terraform plan
 terraform apply
