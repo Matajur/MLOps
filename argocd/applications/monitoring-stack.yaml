@@ -1,95 +1,96 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: monitoring-stack
+  name: prometheus-operator
   namespace: infra-tools
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
-
   destination:
-    server: https://kubernetes.default.svc
     namespace: monitoring
+    server: https://kubernetes.default.svc
 
   source:
     repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 75.16.1
     chart: kube-prometheus-stack
-    targetRevision: 80.6.0
     helm:
-      releaseName: monitoring
-      skipCrds: false
-      values: |
-        alertmanager:
-          enabled: false
+      valuesObject:
+        nameOverride: prometheus-operator
 
-        kubeApiServer:
-          enabled: false
-        kubeControllerManager:
-          enabled: false
-        kubeScheduler:
-          enabled: false
-        kubeEtcd:
-          enabled: false
-        kubeProxy:
-          enabled: false
-
-        kubeStateMetrics:
-          enabled: false
-
-        grafana:
-          enabled: true
-          replicas: 1
-          service:
-            type: ClusterIP
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              memory: 512Mi
-          sidecar:
-            resources:
-              requests:
-                cpu: 50m
-                memory: 128Mi
-              limits:
-                memory: 256Mi
-
-        prometheusOperator:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 200Mi
-            limits:
-              memory: 400Mi
+        defaultRules:
+          create: true
+          rules:
+            cpu: true
+            memory: true
 
         prometheus:
-          service:
-            type: ClusterIP
+          ingress:
+            enabled: false
+          thanosService:
+            enabled: false
+          thanosIngress:
+            enabled: false
           prometheusSpec:
-            serviceMonitorSelectorNilUsesHelmValues: true
-            podMonitorSelectorNilUsesHelmValues: true
-            ruleSelectorNilUsesHelmValues: true
-            retention: 6h
-            retentionSize: 1GB
-            resources:
-              requests:
-                cpu: 200m
-                memory: 512Mi
-              limits:
-                memory: 1Gi
+            serviceMonitorSelector: {}
+            serviceMonitorSelectorNilUsesHelmValues: false
+            retention: 2d
+
+        kubelet:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+
+        alertmanager:
+          enabled: true
+          ingress:
+            enabled: false
+          alertmanagerSpec:
+            forceEnableClusterMode: true
+            configSecret: alertmanager-secret
+
+        grafana:
+          sidecar:
+            datasources:
+              enabled: true
+              defaultDatasourceEnabled: false
+          ingress:
+            enabled: false
+
+          additionalDataSources:
+            - name: Prometheus
+              type: prometheus
+              uid: prometheus
+              url: http://prometheus-operator-prometheus.monitoring:9090
+              access: proxy
+              isDefault: true
+
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+            patch:
+              enabled: false
+            certManager:
+              enabled: false
+            autoGenerateCert: false
+          tls:
+            enabled: false
+
+        kube-state-metrics:
+          prometheus:
+            monitor:
+              enabled: true
 
         prometheus-node-exporter:
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              memory: 128Mi
+          service:
+            port: 9200
+
+  project: default
 
   syncPolicy:
-    automated:
-      selfHeal: true
-      prune: true
     syncOptions:
-      - CreateNamespace=true
-      - SkipHooks=true
+      - Replace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
