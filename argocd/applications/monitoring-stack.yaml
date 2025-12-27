@@ -88,9 +88,9 @@ spec:
   project: default
 
   syncPolicy:
-    syncOptions:
-      - Replace=true
-      - ServerSideApply=true
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      
