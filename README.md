@@ -126,7 +126,7 @@ kubectl port-forward -n mlflow svc/mlflow 5000:5000
 
 Open in browser: http://localhost:5000
 
-![MLflow UI](image.png)
+![MLflow UI](./img/mlfow.png)
 
 4. Run training locally
 
@@ -137,8 +137,8 @@ The trained models will be stored in the cloud in MinIO storage, and PostgreSQL 
 
 ```bash
 cd experiments
-python -m venv .venv
-source .venv/Scripts/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -182,7 +182,7 @@ export PUSHGATEWAY_URL=http://pushgateway.monitoring.svc.cluster.local:9091
   4.6 Run training
 
 ```bash
-python train_and_push.py --pushgateway http://localhost:9091
+python3 train_and_push.py --pushgateway http://localhost:9091
 ```
 
 ![Best run](./img/run.png)
@@ -218,7 +218,7 @@ Open in browser: http://localhost:9091/metrics
 6.1 Port-forward and open Prometheus UI
 
 ```bash
-kubectl port-forward -n monitoring svc/prometheus-server 9090:80
+kubectl port-forward -n monitoring svc/monitoring-stack-prometheus 9090:9090
 ```
 
 Open in browser: http://localhost:9090
@@ -230,6 +230,8 @@ mlflow_accuracy
 mlflow_loss
 ```
 
+![Query execution in Prometheus](./img/prometheus.png)
+
 7. Visualize in Grafana
 
 7.1 Open Grafana UI
@@ -237,10 +239,18 @@ mlflow_loss
 Port-forward
 
 ```bash
-kubectl port-forward -n monitoring svc/grafana 3000:80
+kubectl port-forward -n monitoring svc/monitoring-stack-grafana 3000:80
 ```
 
 Open in browser: http://localhost:3000
+
+- login: admin
+- password: can be found with this command:
+
+```bash
+kubectl -n monitoring get secret monitoring-stack-grafana \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo
+```
 
 7.2 Explore metrics
 
@@ -250,3 +260,5 @@ In **Grafana → Explore → Prometheus**, query:
 mlflow_accuracy
 mlflow_loss
 ```
+
+![Metrics in Grafana](./img/grafana.png)
