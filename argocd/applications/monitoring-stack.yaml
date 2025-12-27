@@ -35,47 +35,6 @@ spec:
         kubeStateMetrics:
           enabled: false
 
-        prometheusOperator:
-          enabled: true
-
-          # FULLY disable admission webhooks
-          admissionWebhooks:
-            enabled: false
-            patch:
-              enabled: false
-            certManager:
-              enabled: false
-
-          # Ensure no webhook service/secret is expected
-          tls:
-            enabled: false
-
-          resources:
-            requests:
-              cpu: 100m
-              memory: 200Mi
-            limits:
-              memory: 400Mi
-
-        prometheus:
-          enabled: true
-          service:
-            type: ClusterIP
-          prometheusSpec:
-            serviceMonitorSelectorNilUsesHelmValues: true
-            podMonitorSelectorNilUsesHelmValues: true
-            ruleSelectorNilUsesHelmValues: true
-
-            retention: 6h
-            retentionSize: 1GB
-
-            resources:
-              requests:
-                cpu: 200m
-                memory: 512Mi
-              limits:
-                memory: 1Gi
-
         grafana:
           enabled: true
           replicas: 1
@@ -94,6 +53,31 @@ spec:
                 memory: 128Mi
               limits:
                 memory: 256Mi
+
+        prometheusOperator:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+            limits:
+              memory: 400Mi
+
+        prometheus:
+          service:
+            type: ClusterIP
+          prometheusSpec:
+            serviceMonitorSelectorNilUsesHelmValues: true
+            podMonitorSelectorNilUsesHelmValues: true
+            ruleSelectorNilUsesHelmValues: true
+
+            retention: 6h
+            retentionSize: 1GB
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+              limits:
+                memory: 1Gi
 
         prometheus-node-exporter:
           resources:
