@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: prometheus-operator
+  name: monitoring-stack
   namespace: infra-tools
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -16,7 +16,7 @@ spec:
     chart: kube-prometheus-stack
     helm:
       valuesObject:
-        nameOverride: prometheus-operator
+        nameOverride: monitoring-stack
 
         defaultRules:
           create: true
@@ -61,7 +61,7 @@ spec:
             - name: Prometheus
               type: prometheus
               uid: prometheus
-              url: http://prometheus-operator-prometheus.monitoring:9090
+              url: http://monitoring-stack-prometheus.monitoring:9090
               access: proxy
               isDefault: true
 
