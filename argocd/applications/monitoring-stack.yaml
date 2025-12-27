@@ -6,6 +6,32 @@ metadata:
 spec:
   project: default
 
+  ignoreDifferences:
+    - group: batch
+      kind: Job
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+    - group: ""
+      kind: ServiceAccount
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+    - group: rbac.authorization.k8s.io
+      kind: Role
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      jqPathExpressions:
+        - .metadata.annotations."helm.sh/hook"
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
