@@ -21,9 +21,23 @@ spec:
           username: mlflow
           database: mlflow
 
+        architecture: standalone
+
         primary:
           persistence:
             enabled: false
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+
+        readReplicas:
+          replicaCount: 0
+
+        metrics:
+          enabled: false
 
         service:
           type: ClusterIP

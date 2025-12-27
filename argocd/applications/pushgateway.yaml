@@ -21,6 +21,15 @@ spec:
           type: ClusterIP
           port: 9091
 
+        replicaCount: 1
+
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+
         serviceMonitor:
           enabled: true
           additionalLabels:
